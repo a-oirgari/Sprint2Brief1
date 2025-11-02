@@ -590,10 +590,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     searchSkills(allJobs[i].skills)
                 ) {
                     manualFilters.push(allJobs[i]);
-                    prov++;
+                    count++;
                 }
             }
-            statsCounter.firstElementChild.textContent = "red";
+            statsCounter.firstElementChild.textContent = count +" " + "matchs found";
             
             renderJobs(manualFilters);
 
