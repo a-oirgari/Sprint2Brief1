@@ -109,6 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('./assets/data/data.json');
             if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
             allJobs = await response.json();
+            // console.log(allJobs);
             saveAllJobs();
         } catch (error) {
             console.error("Error loading data.json:", error);
@@ -258,7 +259,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // 4. Re-render and apply filters
     };
 
-    // ------------------------------------
+   // ------------------------------------
     // --- FAVORITES MANAGEMENT ---
     // ------------------------------------
 
@@ -284,6 +285,7 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     const renderFavoritesCount = () => {
         // TODO: Update favorites count in tab
+        favoritesCount.innerText = `(${favoriteJobIds.length})`;
     };
 
     /**
@@ -295,6 +297,20 @@ document.addEventListener('DOMContentLoaded', () => {
         // 1. Filter jobs by favorite IDs
         // 2. Use createJobCardHTML for each job
         // 3. Show empty message if no favorites
+        console.log(favoriteJobIds)
+        let contentHtml = "";
+        if (favoriteJobIds.length === 0) {
+            favoriteJobsContainer.innerHTML = '<p class="job-listings__empty">No jobs favorite found.</p>';
+        } else {
+            for (let i  = 0; i < favoriteJobIds.length; i++) {
+                const objectJob = allJobs.find((item) => item.id === favoriteJobIds[i]);
+                if (objectJob) {
+                    contentHtml += createJobCardHTML(objectJob);
+                }
+            }
+
+            favoriteJobsContainer.innerHTML = contentHtml;
+        }
     };
 
     /**
@@ -308,6 +324,22 @@ document.addEventListener('DOMContentLoaded', () => {
         // 2. Add or remove from favorites array
         // 3. Save to localStorage
         // 4. Update UI
+
+        // search
+        const indexOfJob = favoriteJobIds.indexOf(jobId);
+
+        // find job
+        if (indexOfJob !== -1) {
+            // Remove job
+            favoriteJobIds.splice(indexOfJob,1);
+       } else {
+            // Add job
+            favoriteJobIds.push(jobId);
+        }
+
+        renderJobs(allJobs);
+        renderFavoritesCount();
+        renderFavoriteJobs();
     };
 
     // ------------------------------------
@@ -508,30 +540,15 @@ document.addEventListener('DOMContentLoaded', () => {
         jobListingsContainer.innerHTML = jobsToRender.length > 0
             ? jobsToRender.map(createJobCardHTML).join('')
             : '<p class="job-listings__empty">No jobs match your search.</p>';
-    };
 
-    /**
-     * Renders active filter tags
-     * @function renderManualFilterTags
-     */
-    const renderManualFilterTags = () => {
-        // TODO: Implement filter tags rendering
-        // Use this HTML template for each tag:
-        // `<div class="filter-bar__tag" data-tag="${tag}">
-        //     <span class="filter-bar__tag-name">${tag}</span>
-        //     <button class="filter-bar__tag-remove" aria-label="Remove filter ${tag}">✕</button>
-        //  </div>`
-    };
+        const btnFavorites = document.getElementsByClassName("job-card__favorite-btn");
 
-    /**
-     * Updates statistics counter
-     * @function renderStats
-     * @param {number} matchCount - Number of matching jobs
-     * @param {number} totalCount - Total number of jobs
-     */
-    const renderStats = (matchCount, totalCount) => {
-        // TODO: Implement stats rendering
-        // Show different messages based on active filters
+        for (let i  = 0; i < btnFavorites.length; i++) {
+            btnFavorites[i].addEventListener('click', (e) => {
+                const idJob = Number(e.target.getAttribute("data-job-id"));
+                toggleFavorite(idJob);
+            })
+        }
     };
 
     // ------------------------------------
@@ -548,11 +565,49 @@ document.addEventListener('DOMContentLoaded', () => {
         // 2. Combine profile skills and manual filters
         // 3. Filter jobs by tags and search term
         // 4. Update all UI components
+        // console.log(sear)
+        searchInput.addEventListener("input", function () {
+            const searchJob = searchInput.value.toLowerCase().trim();
+            let count = 0;
+            manualFilters = [];
+            // console.log(skills)
+            const searchSkills = (skills) => {
+                for (let j = 0; j < skills.length; j++) {
+                    if (skills[j].toLowerCase().includes(searchJob)) {
+                        return true;
+                    }
+                }
+                return false;
+            };
+
+            for (let i = 0; i < allJobs.length; i++) {
+                if (
+                    allJobs[i].company.toLowerCase().includes(searchJob) ||
+                    allJobs[i].position.toLowerCase().includes(searchJob) ||
+                    allJobs[i].location.toLowerCase().includes(searchJob) ||
+                    allJobs[i].role.toLowerCase().includes(searchJob) ||
+                    allJobs[i].contract.toLowerCase().includes(searchJob) ||
+                    searchSkills(allJobs[i].skills)
+                ) {
+                    manualFilters.push(allJobs[i]);
+                    prov++;
+                }
+            }
+            statsCounter.firstElementChild.textContent = "red";
+            
+            renderJobs(manualFilters);
+
+        })
     };
+
 
     // ------------------------------------
     // --- EVENT HANDLERS ---
     // ------------------------------------
+
+    clearFiltersBtn.addEventListener("click", function () {
+        handleClearFilters();
+    })
 
     /**
      * Handles clicks on job listings
@@ -585,6 +640,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // 1. Clear manual filters array
         // 2. Clear search input
         // 3. Apply filters
+        searchInput.value = "";
+        renderJobs(allJobs);
+       
+
+
     };
 
     // ------------------------------------
@@ -625,8 +685,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // Management events
         addNewJobBtn.addEventListener('click', () => openManageModal());
         
+        // // PROVISOIR  searchInput.addEventListener('keydown')
         // Initial job display
         renderJobs(allJobs);
+        
         
         // TODO: Add remaining event listeners
         // Profile events
